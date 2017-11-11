@@ -21,6 +21,9 @@ public class Resources {
     public BufferedImage copyIcon;
     public BufferedImage showIcon;
     public BufferedImage unknownIcon;
+    public BufferedImage addIcon;
+    public BufferedImage editIcon;
+    public BufferedImage trashIcon;
     
     public Resources(){
         try{
@@ -29,6 +32,9 @@ public class Resources {
             copyIcon = ImageIO.read(get("/copy.png")); 
             showIcon = ImageIO.read(get("/show.png"));
             unknownIcon = ImageIO.read(get("/unknown.png"));
+            addIcon = ImageIO.read(get("/add.png"));
+            editIcon = ImageIO.read(get("/edit.png"));
+            trashIcon = ImageIO.read(get("/trash.png"));
             
         }catch(Exception e){
             throw new RuntimeException("Missing or failed to load resource file.");
