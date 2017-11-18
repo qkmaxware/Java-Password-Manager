@@ -24,10 +24,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
-import passwordmanager.DBmanager;
 import passwordmanager.ImgViewer;
 import passwordmanager.actions.Action;
 import passwordmanager.utils.WebsiteIconExtractor;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -47,7 +47,7 @@ public class NewSiteBuilder extends JFrame {
     private String idToModify = null;
     private WebsiteIconExtractor extractor = new WebsiteIconExtractor();
     
-    public NewSiteBuilder(String siteid, DBmanager connection){
+    public NewSiteBuilder(String siteid, DbConnection connection){
         this(connection);
         this.setTitle("Modify Collection");
         button.setText("Update");
@@ -65,7 +65,7 @@ public class NewSiteBuilder extends JFrame {
         }catch(Exception e){}
     }
     
-    public NewSiteBuilder(DBmanager connection){
+    public NewSiteBuilder(DbConnection connection){
         super();
         
         this.setTitle("New Collection");

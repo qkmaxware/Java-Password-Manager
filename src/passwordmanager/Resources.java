@@ -24,6 +24,10 @@ public class Resources {
     public BufferedImage addIcon;
     public BufferedImage editIcon;
     public BufferedImage trashIcon;
+    public BufferedImage noteIcon;
+    public BufferedImage connectIcon;
+    public BufferedImage sqliteIcon;
+    public BufferedImage refreshIcon;
     
     public Resources(){
         try{
@@ -35,6 +39,10 @@ public class Resources {
             addIcon = ImageIO.read(get("/add.png"));
             editIcon = ImageIO.read(get("/edit.png"));
             trashIcon = ImageIO.read(get("/trash.png"));
+            noteIcon = ImageIO.read(get("/notes.png"));
+            connectIcon = ImageIO.read(get("/connect.png"));
+            sqliteIcon = ImageIO.read(get("/sqlite.png"));
+            refreshIcon = ImageIO.read(get("/refresh.png"));
             
         }catch(Exception e){
             throw new RuntimeException("Missing or failed to load resource file.");

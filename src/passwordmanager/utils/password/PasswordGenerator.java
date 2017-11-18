@@ -9,6 +9,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +20,12 @@ import java.util.regex.Pattern;
  */
 public class PasswordGenerator {
 
+    public PasswordGenerator(){
+        List<Sentence> s = Arrays.asList(sentances);
+        Collections.shuffle(s);
+        sentances = s.toArray(sentances);
+    }
+    
     private String[] lowerCase = new String[]{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"};
     private String[] upperCase = transform(lowerCase, (a) -> {
         return a.toUpperCase();
@@ -32,7 +39,12 @@ public class PasswordGenerator {
         new Sentence(new Article(), new Adjective(), new Noun(), new Adverb(), new Verb()),
         new Sentence(new Article(), new Noun(), new Adverb(), new Verb()),
         new Sentence(new Article(), new Adjective(), new Noun(), new Verb()),
-        new Sentence(new Article(), new Noun(), new Verb())
+        new Sentence(new Article(), new Noun(), new Verb()),
+        new Sentence(new Article(), new Adjective(), new Noun(), new Conjunction(), new Article(), new Adjective(), new Noun(), new Adverb(), new Verb()),
+        new Sentence(new Article(), new Noun(), new Conjunction(), new Article(), new Adjective(), new Noun(), new Adverb(), new Verb()),
+        new Sentence(new Article(), new Adjective(), new Noun(), new Conjunction(), new Article(), new Noun(), new Adverb(), new Verb()),
+        new Sentence(new Article(),  new Noun(), new Conjunction(), new Article(),  new Noun(), new Adverb(), new Verb()),
+        new Sentence(new Article(),  new Noun(), new Conjunction(), new Article(),  new Noun(),  new Verb())
     };
     
     private KeyValuePair[] wordsToNumbers = new KeyValuePair[]{
@@ -87,7 +99,7 @@ public class PasswordGenerator {
                 StringBuffer b = new StringBuffer();
                 while(m.find()){
                     int chance = rng.nextInt(11);
-                    boolean replace = chance >= 3; //50% chance
+                    boolean replace = chance <= 3; //25% chance
                     if(replace){
                         m.appendReplacement(b, kv.getValue());
                     }
@@ -105,7 +117,7 @@ public class PasswordGenerator {
                 StringBuffer b = new StringBuffer();
                 while(m.find()){
                     int chance = rng.nextInt(11);
-                    boolean replace = chance >= 3;//50% chance
+                    boolean replace = chance <= 3;//25% chance
                     if(replace){
                         m.appendReplacement(b, kv.getValue());
                     }

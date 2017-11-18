@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package passwordmanager;
+package passwordmanager.connections;
 
 import java.awt.image.RenderedImage;
 import java.io.ByteArrayInputStream;
@@ -13,12 +13,13 @@ import java.nio.file.Paths;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import javax.imageio.ImageIO;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
  * @author Colin Halseth
  */
-public class DBmanager {
+public class SqliteConnection implements DbConnection {
     
     private String connectionString = "jdbc:sqlite:";
     private String databaseName = "default.db";
@@ -29,7 +30,7 @@ public class DBmanager {
     private Connection conn;
     private DatabaseMetaData meta;
     
-    public DBmanager(String database){
+    public SqliteConnection(String database){
         databaseName = database;
         prettyName = Paths.get(database).getFileName().toString();
         
@@ -59,7 +60,7 @@ public class DBmanager {
         //Create websites list
         Statement cWebsites = conn.createStatement();
         cWebsites.execute(createstm.replace(name, "collections").replace(columns, 
-                "id integer PRIMARY KEY autoincrement, name text NOT NULL, url text NOT NULL, keywords text NOT NULL, created text NOT NULL"
+                "id integer PRIMARY KEY autoincrement, name text NOT NULL, url text NOT NULL, keywords text NOT NULL, created text DEFAULT (datetime()) NOT NULL"
         ));
         
         //Create accounts list
@@ -112,6 +113,15 @@ public class DBmanager {
                 "gid integer NOT NULL,"+
                 "wid integer NOT NULL,"+
                 "PRIMARY KEY (gid, wid)"
+        ));
+        
+        //Create notes
+        Statement cNotes = conn.createStatement();
+        cNotes.execute(createstm.replace(name, "notes").replace(columns, 
+                "id integer PRIMARY KEY autoincrement,"+
+                "aid integer NOT NULL,"+
+                "created text DEFAULT (datetime()) NOT NULL,"+
+                "note text"
         ));
     }
     
@@ -184,6 +194,26 @@ public class DBmanager {
         }
     }
     
+    public void CreateNote(String account, String contents){
+        try{
+            Query("INSERT INTO notes (aid,note) VALUES (?,?)", account, contents);
+        }catch(Exception e){}
+    }
+    
+    public void DeleteNote(String noteId){
+        try{
+            Query("DELETE FROM notes WHERE id = ?", noteId);
+        }catch(Exception e){}
+    }
+    
+    public ResultSet GetNotes(String account){
+        try{
+            return Query("SELECT * FROM notes WHERE aid = ?", account);
+        }catch(Exception e){
+            return null;
+        }
+    }
+    
     public void DeleteSite(String site){
         try{
             Query("DELETE FROM accounts WHERE id IN (SELECT aid FROM collection_accounts WHERE wid = ?);", site);
@@ -241,6 +271,13 @@ public class DBmanager {
         }catch(Exception e){
             return null;
         }
+    }
+    
+    @Override
+    public void DeleteSiteImage(String siteId) {
+        try{
+            Query( "DELETE FROM icons WHERE wid = ?;", siteId); 
+        }catch(Exception e){}
     }
     
     public ResultSet GetSiteDetails(String siteid){

@@ -6,23 +6,17 @@
 package passwordmanager;
 
 import passwordmanager.popup.NewAccountBuilder;
-import passwordmanager.popup.NewDatabaseBuilder;
 import passwordmanager.popup.NewSiteBuilder;
 import passwordmanager.layouts.WrapLayout;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -30,6 +24,8 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import javax.swing.*;
 import javax.swing.border.*;
+import passwordmanager.connections.DbConnection;
+import passwordmanager.popup.ConnectionManager;
 
 /**
  *
@@ -41,21 +37,20 @@ public class View extends JFrame{
     private Color detailColor = new Color(57,74,84);
     private Color titleColor = new Color(201, 45, 39);
     
-    private ArrayList<DBmanager> connections = new ArrayList<DBmanager>();
-    private int activeConnectionIndex = 0;
+    private ArrayList<DbConnection> connections = new ArrayList<DbConnection>();
     private String empty = "";
     
     private SiteDetailViewer view;
-    
     private static View me;
+    private Config config;
+    private JComboBox connectionList;
+    private DefaultComboBoxModel connectionListModel;
     
-    public View(DBmanager... conns){
+    public View(Config config){
         super();
+        this.config = config;
         
         me = this;
-        
-        for(int i = 0; i < conns.length; i++) 
-            connections.add(conns[i]);
         
         JPanel mp = new JPanel();
         mp.setLayout(new BorderLayout());
@@ -68,10 +63,6 @@ public class View extends JFrame{
         JScrollPane SitesPane = MakeContentPane();
         contentPane.add(SitesPane, "Sites");
         JPanel sitesContent = ((JPanel)SitesPane.getViewport().getView());
-        
-        if(conns.length > 0){
-            this.UpdateSiteList(sitesContent, null);
-        }
         
         //Header
         JPanel headPanel = new JPanel();
@@ -107,15 +98,26 @@ public class View extends JFrame{
         headPanel.add(Box.createHorizontalStrut(240));
               
         JComboBox database = new JComboBox();
+        DefaultComboBoxModel model = new DefaultComboBoxModel();
+        database.setModel(model);
+        connectionListModel = model;  
+        connectionList = database;
         database.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                activeConnectionIndex = database.getSelectedIndex();
                 UpdateSiteList(sitesContent, search.getText().trim());
             }
         });
-        UpdateDatabaseList(database);
         headPanel.add(database);
+        
+        JLabel refresh = new JLabel(new ImageIcon(Resources.resources.refreshIcon.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+        refresh.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent e){
+                UpdateDatabaseList();
+            }
+        });
+        headPanel.add(refresh);
         
         //Site details
         view = new SiteDetailViewer();
@@ -129,63 +131,79 @@ public class View extends JFrame{
         leftPanel.setBackground(navColor);
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.PAGE_AXIS));
         leftPanel.setBorder(new EmptyBorder(5,5,5,5));
-        
-        
-        
+
         leftPanel.add(Box.createVerticalGlue());
         
         JPopupMenu createMenu = new JPopupMenu();
-        JMenuItem createDb = new JMenuItem("Create Database");
-        createDb.addActionListener((evt) -> {
-            NewDatabaseBuilder ndb = new NewDatabaseBuilder((connection) -> {
-                AddNewDatabase(database, connection);
-                String s = search.getText().trim();
-                this.UpdateSiteList(sitesContent, s.equals(empty) ? null : s);
-            });
-            ndb.setVisible(true);
-            CenterFrameInWindow(ndb);
-        });
-        createMenu.add(createDb);
-        JMenuItem createCollection = new JMenuItem("Create Account Collection");
-        createCollection.addActionListener((evt) -> {
-            DBmanager con = GetConnection();
-            if(con == null)
-                return;
-            NewSiteBuilder nsb = new NewSiteBuilder(con);
-            nsb.onCreate = () -> {
-                String s = search.getText().trim();
-                this.UpdateSiteList(sitesContent, s.equals(empty) ? null : s);
-            };
-            nsb.setVisible(true);
-            CenterFrameInWindow(nsb);
-        });
-        createMenu.add(createCollection);
         createMenu.pack();
         
         JLabel newSite = new JLabel(new ImageIcon(Resources.resources.addIcon.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
         newSite.addMouseListener(new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent evt){
+                DbConnection con = GetConnection();
+                if(con == null)
+                    return;
+                NewSiteBuilder nsb = new NewSiteBuilder(con);
+                nsb.onCreate = () -> {
+                    String s = search.getText().trim();
+                    UpdateSiteList(sitesContent, s.equals(empty) ? null : s);
+                };
+                nsb.setVisible(true);
+                CenterFrameInWindow(nsb);
+                /*
+                NewDatabaseBuilder ndb = new NewDatabaseBuilder((connection) -> {
+                    Config.ConnectionConfig con = new Config.ConnectionConfig();
+                    con.connectionString = "data/" + connection + ".db";
+                    con.driver = "sqlite";
+                    AddNewDatabase(database, config.AddConnection(con));
+                    String s = search.getText().trim();
+                    UpdateSiteList(sitesContent, s.equals(empty) ? null : s);
+                });
+                ndb.setVisible(true);
+                CenterFrameInWindow(ndb);
+                */
+                /*
                 Point pos = new Point();
                 Dimension size = createMenu.getPreferredSize();
                 pos.x = newSite.getWidth() / 2;
                 pos.y = newSite.getHeight() / 2 - size.height;
-                createMenu.show(newSite, pos.x, pos.y);
+                createMenu.show(newSite, pos.x, pos.y);*/
             }
         });
         leftPanel.add(newSite);
         
-        mp.add(leftPanel, BorderLayout.WEST);
+        JLabel connectionMgr = new JLabel(new ImageIcon(Resources.resources.connectIcon.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
+        connectionMgr.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent evt){
+                ConnectionManager mgr = new ConnectionManager(config);
+                mgr.OnNew = () -> {
+                    UpdateDatabaseList();
+                };
+                mgr.OnChange = () -> {
+                    UpdateDatabaseList();
+                };
+                mgr.OnDelete = () -> {
+                    UpdateDatabaseList();
+                };
+                mgr.setVisible(true);
+                View.CenterFrame(mgr);
+            }
+        });
+        leftPanel.add(Box.createVerticalStrut(5));
+        leftPanel.add(connectionMgr);
         
+        mp.add(leftPanel, BorderLayout.WEST);
         mp.add(contentPane, BorderLayout.CENTER);
         
         view.onCreateAccount = (siteId) -> {
-            DBmanager con = GetConnection();
+            DbConnection con = GetConnection();
             if(con == null)
                 return;
             NewAccountBuilder nab = new NewAccountBuilder(siteId, con);
             nab.onCreate = () -> {
-                view.SetDetails(siteId, connections.get(activeConnectionIndex));
+                view.SetDetails(siteId, connections.get(this.GetActiveIndex()));
             };
             nab.setVisible(true);
             CenterFrameInWindow(nab);
@@ -198,6 +216,16 @@ public class View extends JFrame{
         };
         
         this.add(mp);
+        
+        UpdateDatabaseList();
+        if(this.connections.size() > 0){
+            this.UpdateSiteList(sitesContent, null);
+        }
+        
+    }
+   
+    public int GetActiveIndex(){
+        return connectionList.getSelectedIndex();
     }
     
     public static void CenterFrame(JFrame frame){
@@ -217,28 +245,25 @@ public class View extends JFrame{
         frame.setLocation(myx + myw - fw, myh + myy - fy);
     }
     
-    private void AddNewDatabase(JComboBox list, DBmanager manager){
-        this.connections.add(manager);
-        UpdateDatabaseList(list);
-    }
-    
-    public DBmanager GetConnection(){
+    public DbConnection GetConnection(){
         //Valid index
+        int activeConnectionIndex = GetActiveIndex();
         if(activeConnectionIndex >= this.connections.size()){
             return null;
         }
         
-        DBmanager connection = connections.get(activeConnectionIndex);
+        DbConnection connection = connections.get(activeConnectionIndex);
         return connection;
     }
     
     private void UpdateSiteList(JPanel sitesContent, String search){
         //Valid index
-        if(activeConnectionIndex >= this.connections.size()){
+        int activeConnectionIndex = GetActiveIndex();
+        if(activeConnectionIndex < 0 || activeConnectionIndex >= this.connections.size()){
             return;
         }
         
-        DBmanager connection = connections.get(activeConnectionIndex);
+        DbConnection connection = connections.get(activeConnectionIndex);
         if(search == null || search.equals(empty)){
             PopulateSites(sitesContent, connection.GetAllSites());
         }else{
@@ -246,12 +271,14 @@ public class View extends JFrame{
         }
     }
     
-    private void UpdateDatabaseList(JComboBox list){
-        String[] connNames = new String[connections.size()];
-        for(int i = 0; i < connNames.length; i++){
-            connNames[i] = connections.get(i).GetName();
+    private void UpdateDatabaseList(){
+        connectionListModel.removeAllElements();
+        this.connections.clear();
+        for(int i = 0; i < this.config.CountConnections(); i++){
+            DbConnection db = this.config.GetConnection(i).DeriveConnection();
+            this.connections.add(db);
+            connectionListModel.addElement(db.GetName());
         }  
-        list.setModel(new DefaultComboBoxModel(connNames));
     }
     
     private JScrollPane MakeContentPane(){
@@ -270,7 +297,7 @@ public class View extends JFrame{
         panel.addMouseListener(new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent evt){
-                view.SetDetails(id, connections.get(activeConnectionIndex));
+                view.SetDetails(id, connections.get(GetActiveIndex()));
             }
         });
         
@@ -280,7 +307,7 @@ public class View extends JFrame{
         
         JPanel center = new JPanel();
         
-        DBmanager m = GetConnection();
+        DbConnection m = GetConnection();
         BufferedImage img = Resources.resources.unknownIcon;
         if(m != null){
             BufferedImage img2 = (BufferedImage)m.GetSiteImage(id);

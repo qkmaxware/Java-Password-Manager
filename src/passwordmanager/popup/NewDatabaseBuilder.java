@@ -12,8 +12,9 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import passwordmanager.DBmanager;
+import passwordmanager.connections.SqliteConnection;
 import passwordmanager.actions.Func;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -21,7 +22,7 @@ import passwordmanager.actions.Func;
  */
 public class NewDatabaseBuilder extends JFrame{
     
-    public NewDatabaseBuilder(Func<DBmanager> onCreate){
+    public NewDatabaseBuilder(Func<String> onCreate){
         super();
         
         this.setTitle("Create Database");
@@ -39,9 +40,8 @@ public class NewDatabaseBuilder extends JFrame{
         
         JButton button = new JButton("Create");
         button.addActionListener((e) -> {
-            DBmanager connection = new DBmanager("data/" + dbname.getText() + ".db");
             if(onCreate != null)
-                onCreate.Invoke(connection);
+                onCreate.Invoke(dbname.getText());
             dispose();
         });
         content.add(button);

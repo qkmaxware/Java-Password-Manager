@@ -5,10 +5,12 @@
  */
 package passwordmanager;
 
+import passwordmanager.connections.SqliteConnection;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import javax.swing.JFrame;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -20,18 +22,12 @@ public class PasswordManager {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        // TODO code application logic here   
-        //DBmanager database = new DBmanager("data/default.db");
-        //database.CreateSite("Youtube", "http://youtube.com");
-        //database.CreateSite("Github", "http://github.com");
-        //database.CreateAccount("1", "Colin", "Test@test.com", "password");
-        
         //Load all local databases
         File folder = new File("data");
         if(!folder.exists())
             folder.mkdirs();
         File[] dbs = folder.listFiles();
-        ArrayList<DBmanager> managers = new ArrayList<DBmanager>();
+        ArrayList<DbConnection> managers = new ArrayList<DbConnection>();
         for(int i = 0; i < dbs.length; i++){
             File f = dbs[i];
             if(f.isDirectory())
@@ -41,17 +37,24 @@ public class PasswordManager {
             if(last > -1){
                 String ext = f.getName().substring(last);
                 if(ext.equals(".db")){
-                    managers.add(new DBmanager(f.getAbsolutePath()));
+                    managers.add(new SqliteConnection(f.getAbsolutePath()));
                 }
             }
         }
         
-        DBmanager[] connections = managers.toArray(new DBmanager[managers.size()]);
+        DbConnection[] connections = managers.toArray(new DbConnection[managers.size()]);
         
-        View view = new View(connections);
+        //Load in config file and set it up to auto serialize
+        String configLocation = "config.xml";
+        Config config = Config.Deserialize(configLocation);
+        config.OnChange = () -> {
+            Config.Serialize(configLocation, config);
+        };
+        
+        View view = new View(config);
         view.setTitle("My Passwords");
         view.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        view.setSize(640, 480);
+        view.setSize(config.GetWidth(), config.GetHeight());
         view.setVisible(true);
     }
     

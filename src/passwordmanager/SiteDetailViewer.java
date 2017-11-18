@@ -31,6 +31,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import passwordmanager.layouts.VerticalFlowLayout;
 import passwordmanager.layouts.WrapLayout;
+import passwordmanager.popup.NoteViewer;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -60,7 +62,7 @@ public class SiteDetailViewer extends JPanel {
         this.setLayout(new BorderLayout());
     }
 
-    public void SetDetails(String siteId, DBmanager connection) {
+    public void SetDetails(String siteId, DbConnection connection) {
         this.removeAll();
         if (siteId == null) {
             return;
@@ -274,6 +276,14 @@ public class SiteDetailViewer extends JPanel {
                         View.CenterFrame(nab);
                     }
                 });
+                JLabel notes = new JLabel(new ImageIcon(Resources.resources.noteIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                notes.addMouseListener(new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        NoteViewer v = new NoteViewer(aid, connection);
+                        v.setVisible(true);
+                        View.CenterFrame(v);
+                    }
+                });
                 JLabel delete = new JLabel(new ImageIcon(Resources.resources.trashIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
                 delete.addMouseListener(new MouseAdapter(){
                     @Override
@@ -286,6 +296,8 @@ public class SiteDetailViewer extends JPanel {
                     }
                 });
                 accountOptions.add(edit);
+                accountOptions.add(Box.createHorizontalStrut(5));
+                accountOptions.add(notes);
                 accountOptions.add(Box.createHorizontalGlue());
                 accountOptions.add(delete);
                 accountPanel.add(accountOptions);

@@ -21,9 +21,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
-import passwordmanager.DBmanager;
 import passwordmanager.actions.Action;
 import passwordmanager.utils.password.PasswordGenerator;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -42,7 +42,7 @@ public class NewAccountBuilder extends JFrame {
     private JTextField dbpass;
     private JButton button;
     
-    public NewAccountBuilder(String accountId, String username, String email, String password, String siteId, DBmanager connection){
+    public NewAccountBuilder(String accountId, String username, String email, String password, String siteId, DbConnection connection){
         this(siteId, connection);
         editMode = true;
         aId = accountId;
@@ -53,7 +53,7 @@ public class NewAccountBuilder extends JFrame {
         dbpass.setText(password);
     }
     
-    public NewAccountBuilder(String siteId, DBmanager connection){
+    public NewAccountBuilder(String siteId, DbConnection connection){
         super();
         
         this.setTitle("New Account");
