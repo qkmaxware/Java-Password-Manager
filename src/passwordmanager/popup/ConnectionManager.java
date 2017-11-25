@@ -9,12 +9,12 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.nio.file.Paths;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -24,6 +24,7 @@ import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -32,6 +33,7 @@ import passwordmanager.Config;
 import passwordmanager.Config.ConnectionConfig;
 import passwordmanager.Resources;
 import passwordmanager.actions.Action;
+import passwordmanager.connections.DbConnection;
 
 /**
  *
@@ -87,7 +89,8 @@ public class ConnectionManager extends JFrame{
         footer.setBorder(new EmptyBorder(5,5,5,5));
         JButton testConnection = new JButton("Test Connection");
         testConnection.addActionListener((evt) -> {
-            TestConnection();
+            boolean connected = TestConnection();
+            JOptionPane.showMessageDialog(null, "Connection " + (connected ? "was successful" : "failed"));
         });
         footer.add(testConnection);
         footer.add(Box.createHorizontalGlue());
@@ -127,7 +130,8 @@ public class ConnectionManager extends JFrame{
         
         JComboBox drive = new JComboBox(new Driver[]{
             new Driver("Local SQlite Database","sqlite", Resources.resources.sqliteIcon),
-            new Driver("Http Connection","http", null)
+            new Driver("PostgreSQL Database","postgres", Resources.resources.postgresIcon),
+            new Driver("Restful Web Service","http", Resources.resources.httpIcon)
         });
         this.driver = drive;
         Dimension d = new Dimension(240, drive.getPreferredSize().height);
@@ -142,7 +146,10 @@ public class ConnectionManager extends JFrame{
             int returnValue = fc.showOpenDialog(null);
             if(returnValue == JFileChooser.APPROVE_OPTION){
                 File f = fc.getSelectedFile();
-                name.setText(f.getPath().toString());
+                String path = f.getAbsolutePath();
+                String localPath = Paths.get("").toAbsolutePath() + File.separator;
+                //If relative to current location, store relative path not absolute
+                name.setText(path.replace(localPath, ""));
             }
         });
         detailPane.add(AddField("Location", name, location));
@@ -211,11 +218,12 @@ public class ConnectionManager extends JFrame{
         connectionList.repaint();
     }
     
-    private void TestConnection(){
+    private boolean TestConnection(){
         if(this.selectedIndex < 0 || this.selectedIndex >= config.CountConnections())
-            return;
+            return false;
         
-        //TODO
+        DbConnection db = this.config.GetConnection(this.selectedIndex).DeriveConnection();
+        return db.IsConnected() && db.TestConnection();
     }
     
     private void NewConnectionDetails(){

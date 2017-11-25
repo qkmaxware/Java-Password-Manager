@@ -28,6 +28,10 @@ public class Resources {
     public BufferedImage connectIcon;
     public BufferedImage sqliteIcon;
     public BufferedImage refreshIcon;
+    public BufferedImage postgresIcon;
+    public BufferedImage httpIcon;
+    public BufferedImage categoryIcon;
+    public BufferedImage hideIcon;
     
     public Resources(){
         try{
@@ -35,6 +39,7 @@ public class Resources {
             searchIcon = ImageIO.read(get("/search.png"));
             copyIcon = ImageIO.read(get("/copy.png")); 
             showIcon = ImageIO.read(get("/show.png"));
+            hideIcon = ImageIO.read(get("/hide.png"));
             unknownIcon = ImageIO.read(get("/unknown.png"));
             addIcon = ImageIO.read(get("/add.png"));
             editIcon = ImageIO.read(get("/edit.png"));
@@ -43,6 +48,9 @@ public class Resources {
             connectIcon = ImageIO.read(get("/connect.png"));
             sqliteIcon = ImageIO.read(get("/sqlite.png"));
             refreshIcon = ImageIO.read(get("/refresh.png"));
+            postgresIcon = ImageIO.read(get("/postgresql.png"));
+            httpIcon = ImageIO.read(get("/http.png"));
+            categoryIcon = ImageIO.read(get("/categories.png"));
             
         }catch(Exception e){
             throw new RuntimeException("Missing or failed to load resource file.");

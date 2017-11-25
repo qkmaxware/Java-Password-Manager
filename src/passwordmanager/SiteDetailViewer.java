@@ -13,8 +13,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -26,13 +24,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.sql.ResultSet;
+import java.util.HashSet;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import passwordmanager.layouts.VerticalFlowLayout;
-import passwordmanager.layouts.WrapLayout;
 import passwordmanager.popup.NoteViewer;
 import passwordmanager.connections.DbConnection;
+import passwordmanager.layouts.WrapLayout;
 
 /**
  *
@@ -92,9 +90,11 @@ public class SiteDetailViewer extends JPanel {
             public void mouseClicked(MouseEvent evt){
                 int i = JOptionPane.showConfirmDialog(null,"Are you sure you want to delete this collection and all its' associated accounts?");
                 if(i == JOptionPane.YES_OPTION){
-                    connection.DeleteSite(siteId);
-                    if(onDelete != null)
-                        onDelete.Invoke();
+                    if(connection.IsConnected()){
+                        connection.DeleteSite(siteId);
+                        if(onDelete != null)
+                            onDelete.Invoke();
+                    }
                 }
             }
         });
@@ -126,8 +126,56 @@ public class SiteDetailViewer extends JPanel {
         url.setForeground(Color.WHITE);
         detail.add(url);
 
-        //The accounts
         detail.add(new JSeparator());
+        //Categories
+        JPopupMenu menu = new JPopupMenu();
+        passwordmanager.actions.Action updateCategories = () -> {
+            menu.removeAll();
+            
+            try{
+                ResultSet c = connection.GetCategoriesForSite(siteId);
+                HashSet<String> ids = new HashSet<String>();
+                if(c == null)
+                    throw new Exception("Problem occured");
+                while(c.next()){
+                    ids.add(c.getString("id"));
+                }
+                
+                ResultSet set = connection.GetCategories();
+                while(set != null && set.next()){
+                    String gid = set.getString("id");
+                    String category = set.getString("name");
+                    JCheckBox cb = new JCheckBox(category);
+                    if(ids.contains(gid)){
+                        cb.setSelected(true);
+                    }
+                    cb.addItemListener((evt) -> {
+                        if(cb.isSelected()){
+                            connection.AddSiteToCategory(gid, siteId);
+                        }else{
+                            connection.RemoveSiteFromCategory(gid, siteId);
+                        }
+                    });
+                    menu.add(cb);
+                }
+            }catch(Exception e){
+            
+            }
+            
+            menu.pack();
+        };
+        JLabel accat = new JLabel("Categories");
+        accat.setForeground(Color.BLUE);
+        accat.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent evt){
+                updateCategories.Invoke();
+                menu.show(accat, evt.getX(), evt.getY() + 10);
+            }
+        });
+        detail.add(accat);
+        
+        //Accounts:   (+)
         JPanel acc = new JPanel();
         acc.setOpaque(false);
         acc.setLayout(new BoxLayout(acc, BoxLayout.X_AXIS));
@@ -159,152 +207,160 @@ public class SiteDetailViewer extends JPanel {
         this.add(scroll, BorderLayout.CENTER);
         c.gridy++;
         
-        try{
-            BufferedImage images = (BufferedImage)connection.GetSiteImage(siteId);
-            //SELECT format, data FROM images WHERE wid = ?
-            if (images != null) {
-                //Decode image
-                img.image = images;
-            } else {
-                //Use "unknown" graphic
-                img.image = Resources.resources.unknownIcon;
-            }
-        }catch(Exception e){img.image = Resources.resources.unknownIcon;}
+        img.image = Resources.resources.unknownIcon;
+        if(connection.IsConnected())
+            try{
+                BufferedImage images = (BufferedImage)connection.GetSiteImage(siteId);
+                //SELECT format, data FROM images WHERE wid = ?
+                if (images != null) {
+                    //Decode image
+                    img.image = images;
+                }
+            }catch(Exception e){}
         img.repaint();
         
-        try{
-            ResultSet details = connection.GetSiteDetails(siteId);
-            //SELECT * FROM websites WHERE id = ?
-            if (details.next()) {
-                name.setText(details.getString("name"));
-                url.setText(details.getString("url"));
-            }
-        }catch(Exception e){}
+        if(connection.IsConnected())
+            try{
+                ResultSet details = connection.GetSiteDetails(siteId);
+                //SELECT * FROM websites WHERE id = ?
+                if (details.next()) {
+                    name.setText(details.getString("name"));
+                    url.setText(details.getString("url"));
+                }
+            }catch(Exception e){}
+        
+        ImageIcon showI = new ImageIcon(Resources.resources.showIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+        ImageIcon hideI = new ImageIcon(Resources.resources.hideIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+        
+        //The accounts
+        if(connection.IsConnected())
+            try{
+                ResultSet accounts = connection.GetSiteAccounts(siteId);
+                //SELECT * FROM accounts WHERE id IN (SELECT aid FROM website_accounts WHERE wid = ?)
+                //SELECT * FROM accounts LEFT JOIN website_accounts ON accounts.id = website_accounts.aid WHERE wid = ?
 
-        try{
-            ResultSet accounts = connection.GetSiteAccounts(siteId);
-            //SELECT * FROM accounts WHERE id IN (SELECT aid FROM website_accounts WHERE wid = ?)
-            //SELECT * FROM accounts LEFT JOIN website_accounts ON accounts.id = website_accounts.aid WHERE wid = ?
+                while (accounts.next()) {
+                    JPanel accountPanel = new JPanel();
+                    //accountPanel.setPreferredSize(new Dimension(140, 120));
+                    accountPanel.setBorder(new LineBorder(Color.black, 1, false));
+                    accountPanel.setLayout(new GridLayout(0,1));
 
-            while (accounts.next()) {
-                JPanel accountPanel = new JPanel();
-                //accountPanel.setPreferredSize(new Dimension(140, 120));
-                accountPanel.setBorder(new LineBorder(Color.black, 1, false));
-                accountPanel.setLayout(new GridLayout(0,1));
+                    String aid = accounts.getString("id");
 
-                String aid = accounts.getString("id");
-                
-                JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                namePanel.add(new JLabel("Username:"));
-                JTextField aname = new JTextField(accounts.getString("username"));
-                JLabel copyn = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                copyn.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        //Copy password to clipboard
-                        StringSelection sel = new StringSelection(aname.getText());
-                        Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
-                        clp.setContents(sel, null);
-                    }
-                });
-                namePanel.add(copyn);
-                aname.setEditable(false);
-                aname.setAlignmentX(Component.LEFT_ALIGNMENT);
-                accountPanel.add(namePanel);
-                accountPanel.add(aname);
-                
-                
-                JPanel mailPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                mailPanel.add(new JLabel("Email:"));
-                JTextField aemail = new JTextField(accounts.getString("email"));
-                JLabel copym = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                copym.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        //Copy password to clipboard
-                        StringSelection sel = new StringSelection(aemail.getText());
-                        Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
-                        clp.setContents(sel, null);
-                    }
-                });
-                mailPanel.add(copym);
-                aemail.setEditable(false);
-                aemail.setAlignmentX(Component.LEFT_ALIGNMENT);
-                accountPanel.add(mailPanel);
-                accountPanel.add(aemail);
-
-                String password = accounts.getString("password");
-                String hiddenpass = repeat("*", password.length());
-                JLabel copy = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                copy.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        //Copy password to clipboard
-                        StringSelection sel = new StringSelection(password);
-                        Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
-                        clp.setContents(sel, null);
-                    }
-                });
-                
-                JPanel passPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                JTextField apass = new JTextField(hiddenpass);
-                apass.setEditable(false);
-
-                JLabel show = new JLabel(new ImageIcon(Resources.resources.showIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                show.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        boolean hidden = !apass.getText().equals(hiddenpass);
-                        if (hidden == false) {
-                            apass.setText(password);
-                        } else {
-                            apass.setText(hiddenpass);
+                    JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    namePanel.add(new JLabel("Username:"));
+                    JTextField aname = new JTextField(accounts.getString("username"));
+                    JLabel copyn = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    copyn.addMouseListener(new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            //Copy password to clipboard
+                            StringSelection sel = new StringSelection(aname.getText());
+                            Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
+                            clp.setContents(sel, null);
                         }
-                    }
-                });
+                    });
+                    namePanel.add(copyn);
+                    aname.setEditable(false);
+                    aname.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    accountPanel.add(namePanel);
+                    accountPanel.add(aname);
 
-                passPanel.add(new JLabel("Password:"));
-                passPanel.add(show);
-                passPanel.add(copy);
-                accountPanel.add(passPanel);
-                accountPanel.add(apass);
-                
-                JPanel accountOptions = new JPanel();
-                accountOptions.setBorder(new EmptyBorder(5,5,5,5));
-                accountOptions.setLayout(new BoxLayout(accountOptions, BoxLayout.X_AXIS));
-                JLabel edit = new JLabel(new ImageIcon(Resources.resources.editIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                edit.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        NewAccountBuilder nab = new NewAccountBuilder(aid, aname.getText(), aemail.getText(), password, "-1", connection);
-                        nab.setVisible(true);
-                        View.CenterFrame(nab);
-                    }
-                });
-                JLabel notes = new JLabel(new ImageIcon(Resources.resources.noteIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                notes.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        NoteViewer v = new NoteViewer(aid, connection);
-                        v.setVisible(true);
-                        View.CenterFrame(v);
-                    }
-                });
-                JLabel delete = new JLabel(new ImageIcon(Resources.resources.trashIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
-                delete.addMouseListener(new MouseAdapter(){
-                    @Override
-                    public void mouseClicked(MouseEvent evt){
-                        int i = JOptionPane.showConfirmDialog(null,"Are you sure you want to delete this account?");
-                        if(i == JOptionPane.YES_OPTION){
-                            connection.DeleteAccount(aid);
-                            SetDetails(siteId, connection);
+
+                    JPanel mailPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    mailPanel.add(new JLabel("Email:"));
+                    JTextField aemail = new JTextField(accounts.getString("email"));
+                    JLabel copym = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    copym.addMouseListener(new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            //Copy password to clipboard
+                            StringSelection sel = new StringSelection(aemail.getText());
+                            Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
+                            clp.setContents(sel, null);
                         }
-                    }
-                });
-                accountOptions.add(edit);
-                accountOptions.add(Box.createHorizontalStrut(5));
-                accountOptions.add(notes);
-                accountOptions.add(Box.createHorizontalGlue());
-                accountOptions.add(delete);
-                accountPanel.add(accountOptions);
-                
-                accountList.add(accountPanel);
-            }
-        }catch(Exception e){}
+                    });
+                    mailPanel.add(copym);
+                    aemail.setEditable(false);
+                    aemail.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    accountPanel.add(mailPanel);
+                    accountPanel.add(aemail);
+
+                    String password = accounts.getString("password");
+                    String hiddenpass = repeat("*", password.length());
+                    JLabel copy = new JLabel(new ImageIcon(Resources.resources.copyIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    copy.addMouseListener(new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            //Copy password to clipboard
+                            StringSelection sel = new StringSelection(password);
+                            Clipboard clp = Toolkit.getDefaultToolkit().getSystemClipboard();
+                            clp.setContents(sel, null);
+                        }
+                    });
+
+                    JPanel passPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    JTextField apass = new JTextField(hiddenpass);
+                    apass.setEditable(false);
+
+                    JLabel show = new JLabel(hideI);
+                    show.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseClicked(MouseEvent e) {
+                            boolean hidden = !apass.getText().equals(hiddenpass);
+                            if (hidden == false) {
+                                apass.setText(password);
+                                show.setIcon(showI);
+                            } else {
+                                apass.setText(hiddenpass);
+                                show.setIcon(hideI);
+                            }
+                        }
+                    });
+
+                    passPanel.add(new JLabel("Password:"));
+                    passPanel.add(show);
+                    passPanel.add(copy);
+                    accountPanel.add(passPanel);
+                    accountPanel.add(apass);
+
+                    JPanel accountOptions = new JPanel();
+                    accountOptions.setBorder(new EmptyBorder(5,5,5,5));
+                    accountOptions.setLayout(new BoxLayout(accountOptions, BoxLayout.X_AXIS));
+                    JLabel edit = new JLabel(new ImageIcon(Resources.resources.editIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    edit.addMouseListener(new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            NewAccountBuilder nab = new NewAccountBuilder(aid, aname.getText(), aemail.getText(), password, "-1", connection);
+                            nab.setVisible(true);
+                            View.CenterFrame(nab);
+                        }
+                    });
+                    JLabel notes = new JLabel(new ImageIcon(Resources.resources.noteIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    notes.addMouseListener(new MouseAdapter() {
+                        public void mouseClicked(MouseEvent e) {
+                            NoteViewer v = new NoteViewer(aid, connection);
+                            v.setVisible(true);
+                            View.CenterFrame(v);
+                        }
+                    });
+                    JLabel delete = new JLabel(new ImageIcon(Resources.resources.trashIcon.getScaledInstance(18, 18, Image.SCALE_SMOOTH)));
+                    delete.addMouseListener(new MouseAdapter(){
+                        @Override
+                        public void mouseClicked(MouseEvent evt){
+                            int i = JOptionPane.showConfirmDialog(null,"Are you sure you want to delete this account?");
+                            if(i == JOptionPane.YES_OPTION){
+                                connection.DeleteAccount(aid);
+                                SetDetails(siteId, connection);
+                            }
+                        }
+                    });
+                    accountOptions.add(edit);
+                    accountOptions.add(Box.createHorizontalStrut(5));
+                    accountOptions.add(notes);
+                    accountOptions.add(Box.createHorizontalGlue());
+                    accountOptions.add(delete);
+                    accountPanel.add(accountOptions);
+
+                    accountList.add(accountPanel);
+                }
+            }catch(Exception e){}
     }
 
     private String repeat(String base, int amount){

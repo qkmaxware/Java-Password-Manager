@@ -13,7 +13,6 @@ import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
-import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -24,7 +23,6 @@ import javax.swing.JTextArea;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import passwordmanager.Resources;
-import passwordmanager.View;
 import passwordmanager.layouts.WrapLayout;
 import passwordmanager.connections.DbConnection;
 
@@ -68,7 +66,7 @@ public class NoteViewer extends JFrame{
                 JTextArea tex = new JTextArea();
                 tex.setPreferredSize(new Dimension(120, 120));
                 int s = JOptionPane.showConfirmDialog(null,new JScrollPane(tex),"New Note", JOptionPane.OK_CANCEL_OPTION);
-                if(s == JOptionPane.OK_OPTION){
+                if(db.IsConnected() && s == JOptionPane.OK_OPTION){
                     db.CreateNote(accountid, tex.getText());
                     Refresh();
                 }
@@ -81,6 +79,9 @@ public class NoteViewer extends JFrame{
     
     void Refresh(){
         contents.removeAll();
+        if(!db.IsConnected())
+            return;
+            
         ResultSet notes = db.GetNotes(accountid);
         if(notes != null){
             try{

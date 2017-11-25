@@ -15,6 +15,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -131,11 +132,26 @@ public class View extends JFrame{
         leftPanel.setBackground(navColor);
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.PAGE_AXIS));
         leftPanel.setBorder(new EmptyBorder(5,5,5,5));
-
-        leftPanel.add(Box.createVerticalGlue());
         
-        JPopupMenu createMenu = new JPopupMenu();
-        createMenu.pack();
+        JLabel categoryManager = new JLabel(new ImageIcon(Resources.resources.categoryIcon.getScaledInstance(24, 24, Image.SCALE_SMOOTH))); 
+        categoryManager.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent evt){
+                DbConnection con = GetConnection();
+                if(con == null)
+                    return;
+                
+                CategoryList list = new CategoryList(con);
+                list.setVisible(true);
+                list.setLocation(
+                        categoryManager.getLocation().x + categoryManager.getWidth() / 2, 
+                        categoryManager.getLocation().y + list.getHeight() / 2
+                );
+            }
+        });
+        leftPanel.add(categoryManager);
+        
+        leftPanel.add(Box.createVerticalGlue());
         
         JLabel newSite = new JLabel(new ImageIcon(Resources.resources.addIcon.getScaledInstance(24, 24, Image.SCALE_SMOOTH)));
         newSite.addMouseListener(new MouseAdapter(){
@@ -151,24 +167,6 @@ public class View extends JFrame{
                 };
                 nsb.setVisible(true);
                 CenterFrameInWindow(nsb);
-                /*
-                NewDatabaseBuilder ndb = new NewDatabaseBuilder((connection) -> {
-                    Config.ConnectionConfig con = new Config.ConnectionConfig();
-                    con.connectionString = "data/" + connection + ".db";
-                    con.driver = "sqlite";
-                    AddNewDatabase(database, config.AddConnection(con));
-                    String s = search.getText().trim();
-                    UpdateSiteList(sitesContent, s.equals(empty) ? null : s);
-                });
-                ndb.setVisible(true);
-                CenterFrameInWindow(ndb);
-                */
-                /*
-                Point pos = new Point();
-                Dimension size = createMenu.getPreferredSize();
-                pos.x = newSite.getWidth() / 2;
-                pos.y = newSite.getHeight() / 2 - size.height;
-                createMenu.show(newSite, pos.x, pos.y);*/
             }
         });
         leftPanel.add(newSite);
@@ -264,10 +262,13 @@ public class View extends JFrame{
         }
         
         DbConnection connection = connections.get(activeConnectionIndex);
+        if(!connection.IsConnected())
+            return;
+        
         if(search == null || search.equals(empty)){
-            PopulateSites(sitesContent, connection.GetAllSites());
+            PopulateSites(sitesContent, connection.GetSites(CategoryList.GetVisibilityFor(connection)));
         }else{
-            PopulateSites(sitesContent, connection.SearchSites(search));
+            PopulateSites(sitesContent, connection.SearchSites(search, CategoryList.GetVisibilityFor(connection)));
         }
     }
     
@@ -309,7 +310,7 @@ public class View extends JFrame{
         
         DbConnection m = GetConnection();
         BufferedImage img = Resources.resources.unknownIcon;
-        if(m != null){
+        if(m != null && m.IsConnected()){
             BufferedImage img2 = (BufferedImage)m.GetSiteImage(id);
             if(img2 != null)
                 img = img2;

@@ -14,7 +14,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -90,10 +89,12 @@ public class NewAccountBuilder extends JFrame {
         
         button = new JButton("Create");
         button.addActionListener((e) -> {
-            if(!editMode){
-                connection.CreateAccount(siteId, dbname.getText(), dbemail.getText(), dbpass.getText());
-            }else{
-                connection.UpdateAccount(aId, dbname.getText(), dbemail.getText(), dbpass.getText());
+            if(connection.IsConnected()){
+                if(!editMode){
+                    connection.CreateAccount(siteId, dbname.getText(), dbemail.getText(), dbpass.getText());
+                }else{
+                    connection.UpdateAccount(aId, dbname.getText(), dbemail.getText(), dbpass.getText());
+                }
             }
             
             if(onCreate != null)

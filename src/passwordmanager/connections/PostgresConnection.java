@@ -6,17 +6,56 @@
 package passwordmanager.connections;
 
 import java.awt.image.RenderedImage;
+import java.net.URI;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 
 /**
  *
  * @author Colin Halseth
  */
-public class HttpConnection implements DbConnection{
-
+public class PostgresConnection implements DbConnection{
+    
+    private static String connectionBase = "jdbc:postgresql:";
+    private String prettyName;
+    private Connection conn;
+    
+    private boolean successfulConnect = true;
+    
+    public PostgresConnection(String url){
+        this(url, null, null);
+    }
+    public PostgresConnection(String url, String username, String password){
+        String empty = "";
+        
+        username = username.trim();
+        password = password.trim();
+        
+        if(username.equals(empty))
+            username = null;
+        if(password.equals(empty))
+            password = null;
+        
+        String connectionString = connectionBase + url;
+        try{
+            URI uri = new URI(url);
+            prettyName = uri.getHost();
+            if(username != null && password != null){
+                conn = DriverManager.getConnection(connectionString, username, password);
+            }else{
+                conn = DriverManager.getConnection(connectionString);
+            }
+            
+            
+        }catch(Exception e){
+            successfulConnect = false;
+        }
+    }
+    
     @Override
     public String GetName() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return prettyName;
     }
 
     @Override
@@ -101,7 +140,7 @@ public class HttpConnection implements DbConnection{
 
     @Override
     public boolean IsConnected() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return successfulConnect;
     }
 
     @Override
@@ -138,5 +177,6 @@ public class HttpConnection implements DbConnection{
     public ResultSet GetCategoriesForSite(String siteId) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+    
     
 }

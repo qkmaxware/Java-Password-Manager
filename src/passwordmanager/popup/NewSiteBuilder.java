@@ -6,16 +6,13 @@
 package passwordmanager.popup;
 
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.List;
 import javax.imageio.ImageIO;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -53,16 +50,17 @@ public class NewSiteBuilder extends JFrame {
         button.setText("Update");
         idToModify = siteid;
         
-        try{
-            ResultSet details = connection.GetSiteDetails(siteid);
-            if(details.next()){
-                dbname.setText(details.getString("name"));
-                dburl.setText(details.getString("url"));
-                dbkeywords.setText(details.getString("keywords"));
-            }
-            
-            icon.image = (BufferedImage)connection.GetSiteImage(siteid);
-        }catch(Exception e){}
+        if(connection.IsConnected())
+            try{
+                ResultSet details = connection.GetSiteDetails(siteid);
+                if(details.next()){
+                    dbname.setText(details.getString("name"));
+                    dburl.setText(details.getString("url"));
+                    dbkeywords.setText(details.getString("keywords"));
+                }
+
+                icon.image = (BufferedImage)connection.GetSiteImage(siteid);
+            }catch(Exception e){}
     }
     
     public NewSiteBuilder(DbConnection connection){
@@ -137,14 +135,16 @@ public class NewSiteBuilder extends JFrame {
         
         button = new JButton("Create");
         button.addActionListener((e) -> {
-            if(idToModify == null){
-                long nid = connection.CreateSite(dbname.getText(), dburl.getText(), dbkeywords.getText());
-                if(icon.image != null)
-                    connection.SetSiteImage(""+nid, icon.image);
-            }else{
-                connection.UpdateSite(idToModify, dbname.getText(), dburl.getText(), dbkeywords.getText());
-                if(icon.image != null)
-                    connection.SetSiteImage(idToModify, icon.image);
+            if(connection.IsConnected()){
+                if(idToModify == null){
+                    long nid = connection.CreateSite(dbname.getText(), dburl.getText(), dbkeywords.getText());
+                    if(icon.image != null)
+                        connection.SetSiteImage(""+nid, icon.image);
+                }else{
+                    connection.UpdateSite(idToModify, dbname.getText(), dburl.getText(), dbkeywords.getText());
+                    if(icon.image != null)
+                        connection.SetSiteImage(idToModify, icon.image);
+                }
             }
             
             if(onCreate != null)

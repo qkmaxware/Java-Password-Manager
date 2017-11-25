@@ -6,15 +6,10 @@
 package passwordmanager.popup;
 
 import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import passwordmanager.connections.SqliteConnection;
 import passwordmanager.actions.Func;
-import passwordmanager.connections.DbConnection;
 
 /**
  *

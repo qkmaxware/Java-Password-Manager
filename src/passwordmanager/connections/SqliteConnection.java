@@ -30,6 +30,8 @@ public class SqliteConnection implements DbConnection {
     private Connection conn;
     private DatabaseMetaData meta;
     
+    private boolean goodConnection = true;
+    
     public SqliteConnection(String database){
         databaseName = database;
         prettyName = Paths.get(database).getFileName().toString();
@@ -43,8 +45,7 @@ public class SqliteConnection implements DbConnection {
                 throw new Exception("Failed to establish connection to the database");
             }
         }catch(Exception e){
-            System.out.println( e.getClass().getName() + ": " + e.getMessage() );
-            System.exit(0);
+            goodConnection = false;
         }
     }
 
@@ -125,29 +126,59 @@ public class SqliteConnection implements DbConnection {
         ));
     }
     
-    public ResultSet GetAllSites(){
+    public ResultSet GetSites(String... hiddenGroups){
         try{
-            return Query("SELECT * FROM collections ORDER BY id;");
+            String where = "";
+            if(hiddenGroups.length > 0){
+                where = " WHERE id NOT IN (SELECT wid FROM category_collections WHERE gid IN (";
+                for(int i = 0; i < hiddenGroups.length; i++){
+                    if(i != 0)
+                        where += ",";
+                    where += "?";
+                }
+                where += "))";
+            }
+            return Query("SELECT * FROM collections"+where+" ORDER BY id;", hiddenGroups);
         }catch(Exception e){
             throw new RuntimeException(e.getMessage());
         }
     }
     
-    public ResultSet SearchSites(String term){
+    public ResultSet SearchSites(String term, String... hiddenGroups){
         try{
+            String searchterm = "%"+term+"%";
+            String where = "";
+            
+            String[] params = new String[hiddenGroups.length + 3]; int k = 0;
+            params[k++] = searchterm;
+            params[k++] = searchterm;
+            params[k++] = searchterm;
+            if(hiddenGroups.length > 0){
+                where = " AND id NOT IN (SELECT wid FROM category_collections WHERE gid IN (";
+                for(int i = 0; i < hiddenGroups.length; i++){
+                    if(i != 0)
+                        where += ",";
+                    where += "?";
+                    params[k++] = hiddenGroups[i];
+                }
+                where += "))\n";
+            }
+            
             String s = (
                 "SELECT *\n" +
                 "FROM collections\n" +
                 "WHERE \n" +
-                "    lower(name) LIKE lower(?) \n"
+                "    (lower(name) LIKE lower(?) \n"
               + "    OR lower(url) LIKE lower(?) \n"
-              + "    OR lower(ifnull(keywords,'')) LIKE lower(?) \n"
+              + "    OR lower(ifnull(keywords,'')) LIKE lower(?)) \n"
+              + where
               + "ORDER BY id;"
             );
-            String searchterm = "%"+term+"%";
-            return Query(s, searchterm,searchterm,searchterm);
+            
+            return Query(s, params);
             
         }catch(Exception e){
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }
@@ -332,5 +363,61 @@ public class SqliteConnection implements DbConnection {
     private ResultSet Query(String query, Object... params) throws Exception{
         PreparedStatement c = QueryAll(query, params);
         return c.getResultSet();
+    }
+
+    @Override
+    public boolean IsConnected() {
+        return this.goodConnection;
+    }
+
+    @Override
+    public boolean TestConnection() {
+        return IsConnected();
+    }
+
+    @Override
+    public ResultSet GetCategories() {
+        try{
+            return Query("SELECT * FROM categories;"); 
+        }catch(Exception e){
+            return null;
+        }
+    }
+
+    @Override
+    public void CreateCategory(String name) {
+        try{
+            Query("INSERT INTO categories(name) VALUES(?);", name); 
+        }catch(Exception e){}
+    }
+
+    @Override
+    public void DeleteCategory(String categoryId) {
+        try{
+            Query("DELETE FROM categories WHERE id = ?;", categoryId); 
+        }catch(Exception e){}
+    }
+
+    @Override
+    public void AddSiteToCategory(String categoryId, String siteId) {
+        try{
+            Query("INSERT INTO category_collections (gid, wid) VALUES(?,?);", categoryId, siteId); 
+        }catch(Exception e){}
+    }
+
+    @Override
+    public void RemoveSiteFromCategory(String categoryId, String siteId) {
+        try{
+            Query("REMOVE FROM category_collections WHERE gid=? AND wid=?;", categoryId, siteId); 
+        }catch(Exception e){}
+    }
+
+    @Override
+    public ResultSet GetCategoriesForSite(String siteId) {
+        try{
+            return Query("SELECT * FROM categories WHERE id IN (SELECT gid FROM category_collections WHERE wid = ?);", siteId); 
+        }catch(Exception e){
+            return null;
+        }
     }
 }

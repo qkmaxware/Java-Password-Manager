@@ -16,15 +16,25 @@ public interface DbConnection {
  
     //General Stuff
     public String GetName();
+    public boolean IsConnected();
+    public boolean TestConnection();
     
     //Site Stuff
-    public ResultSet GetAllSites();
+    public ResultSet GetSites(String... hiddenGroups);
+    public ResultSet SearchSites(String term, String... hiddenGroups);
     public ResultSet GetSiteDetails(String siteId);
     public ResultSet GetSiteAccounts(String siteId);
-    public ResultSet SearchSites(String term);
     public long CreateSite(String siteName, String url, String... keywords);
     public void DeleteSite(String siteId);
     public void UpdateSite(String siteId, String name, String url, String... keywords);
+    
+    //Category Stuff
+    public ResultSet GetCategories();
+    public ResultSet GetCategoriesForSite(String siteId);
+    public void CreateCategory(String name);
+    public void DeleteCategory(String categoryId);
+    public void AddSiteToCategory(String categoryId, String siteId);
+    public void RemoveSiteFromCategory(String categoryId, String siteId);
     
     //Icon Stuff
     public void SetSiteImage(String siteId, RenderedImage img);

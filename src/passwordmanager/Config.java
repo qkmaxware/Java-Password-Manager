@@ -21,6 +21,7 @@ import org.w3c.dom.NodeList;
 import passwordmanager.actions.Action;
 import passwordmanager.connections.DbConnection;
 import passwordmanager.connections.HttpConnection;
+import passwordmanager.connections.PostgresConnection;
 import passwordmanager.connections.SqliteConnection;
 
 /**
@@ -40,6 +41,8 @@ public class Config {
             switch(driver){
                 case "sqlite":
                     return new SqliteConnection(connectionString);
+                case "postgres":
+                    return new PostgresConnection(connectionString, user, password);
                 case "http":
                     return new HttpConnection(); //TODO
             }
