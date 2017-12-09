@@ -64,8 +64,9 @@ public class NoteViewer extends JFrame{
             @Override
             public void mouseClicked(MouseEvent e) {
                 JTextArea tex = new JTextArea();
-                tex.setPreferredSize(new Dimension(120, 120));
-                int s = JOptionPane.showConfirmDialog(null,new JScrollPane(tex),"New Note", JOptionPane.OK_CANCEL_OPTION);
+                JScrollPane scroller = new JScrollPane(tex);
+                scroller.setPreferredSize(new Dimension(120, 120));
+                int s = JOptionPane.showConfirmDialog(null,scroller,"New Note", JOptionPane.OK_CANCEL_OPTION);
                 if(db.IsConnected() && s == JOptionPane.OK_OPTION){
                     db.CreateNote(accountid, tex.getText());
                     Refresh();

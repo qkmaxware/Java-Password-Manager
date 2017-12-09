@@ -144,8 +144,8 @@ public class View extends JFrame{
                 CategoryList list = new CategoryList(con);
                 list.setVisible(true);
                 list.setLocation(
-                        categoryManager.getLocation().x + categoryManager.getWidth() / 2, 
-                        categoryManager.getLocation().y + list.getHeight() / 2
+                        categoryManager.getLocationOnScreen().x + categoryManager.getWidth() / 2, 
+                        categoryManager.getLocationOnScreen().y + categoryManager.getHeight()/ 2
                 );
             }
         });

@@ -394,6 +394,7 @@ public class SqliteConnection implements DbConnection {
     @Override
     public void DeleteCategory(String categoryId) {
         try{
+            Query("DELETE FROM category_collections WHERE gid = ?", categoryId); //Cleanup relationships first
             Query("DELETE FROM categories WHERE id = ?;", categoryId); 
         }catch(Exception e){}
     }

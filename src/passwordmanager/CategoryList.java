@@ -94,6 +94,7 @@ public class CategoryList extends JFrame{
                     con.CreateCategory(n);
                 }
                 UpdateList(list, vis, con);
+                name.setText("");
             }
         });
         header.add(add);
